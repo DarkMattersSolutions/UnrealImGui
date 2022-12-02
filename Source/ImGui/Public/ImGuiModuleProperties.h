@@ -2,11 +2,19 @@
 
 #pragma once
 
+struct ImFontConfig;
 
 /** Properties that define state of the ImGui module. */
 class IMGUI_API FImGuiModuleProperties
 {
 public:
+
+	bool IsInputEnabledInEditor() const { return bInputEnabledInEditor; }
+
+	void SetInputEnabledInEditor(bool bEnabled)
+	{
+		bInputEnabledInEditor = bEnabled;
+	}
 
 	/** Check whether input is enabled. */
 	bool IsInputEnabled() const { return bInputEnabled; }
@@ -71,9 +79,19 @@ public:
 	/** Toggle ImGui demo. */
 	void ToggleDemo() { SetShowDemo(!ShowDemo()); }
 
+	/** Adds a new font to initialize */
+	void AddCustomFont(FName FontName, TSharedPtr<ImFontConfig> Font) { CustomFonts.Emplace(FontName, Font); }
+
+	/** Removes a font from the custom font list */
+	void RemoveCustomFont(FName FontName) { CustomFonts.Remove(FontName); }
+
+	/** Gets the map of registered custom fonts */
+	TMap<FName, TSharedPtr<ImFontConfig>>& GetCustomFonts() { return CustomFonts; }
+
 private:
 
 	bool bInputEnabled = false;
+	bool bInputEnabledInEditor = false;
 
 	bool bKeyboardNavigationEnabled = false;
 	bool bGamepadNavigationEnabled = false;
@@ -83,4 +101,6 @@ private:
 	bool bMouseInputShared = false;
 
 	bool bShowDemo = false;
+
+	TMap<FName, TSharedPtr<ImFontConfig>> CustomFonts;
 };

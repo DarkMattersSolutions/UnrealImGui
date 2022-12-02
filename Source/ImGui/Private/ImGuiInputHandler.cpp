@@ -40,6 +40,9 @@ FReply UImGuiInputHandler::OnKeyChar(const struct FCharacterEvent& CharacterEven
 
 FReply UImGuiInputHandler::OnKeyDown(const FKeyEvent& KeyEvent)
 {
+	if (KeyEvent.GetKey() == EKeys::F8) {
+		return ToReply(false);
+	}
 	if (KeyEvent.GetKey().IsGamepadKey())
 	{
 		bool bConsume = false;
@@ -79,12 +82,16 @@ FReply UImGuiInputHandler::OnKeyDown(const FKeyEvent& KeyEvent)
 		InputState->SetKeyDown(KeyEvent, true);
 		CopyModifierKeys(KeyEvent);
 
+		InputState->KeyDownEvents.Add(KeyEvent.GetKeyCode(), KeyEvent);
+
 		return ToReply(bConsume);
 	}
 }
 
 FReply UImGuiInputHandler::OnKeyUp(const FKeyEvent& KeyEvent)
 {
+	InputState->KeyUpEvents.Add(KeyEvent.GetKeyCode(), KeyEvent);
+
 	if (KeyEvent.GetKey().IsGamepadKey())
 	{
 		bool bConsume = false;
@@ -126,13 +133,13 @@ FReply UImGuiInputHandler::OnMouseButtonDown(const FPointerEvent& MouseEvent)
 	}
 
 	InputState->SetMouseDown(MouseEvent, true);
-	return ToReply(true);
+	return ToReply(WantsMouseCapture());
 }
 
 FReply UImGuiInputHandler::OnMouseButtonDoubleClick(const FPointerEvent& MouseEvent)
 {
 	InputState->SetMouseDown(MouseEvent, true);
-	return ToReply(true);
+	return ToReply(WantsMouseCapture());
 }
 
 FReply UImGuiInputHandler::OnMouseButtonUp(const FPointerEvent& MouseEvent)
@@ -143,13 +150,13 @@ FReply UImGuiInputHandler::OnMouseButtonUp(const FPointerEvent& MouseEvent)
 	}
 
 	InputState->SetMouseDown(MouseEvent, false);
-	return ToReply(true);
+	return ToReply(WantsMouseCapture());
 }
 
 FReply UImGuiInputHandler::OnMouseWheel(const FPointerEvent& MouseEvent)
 {
 	InputState->AddMouseWheelDelta(MouseEvent.GetWheelDelta());
-	return ToReply(true);
+	return ToReply(WantsMouseCapture());
 }
 
 FReply UImGuiInputHandler::OnMouseMove(const FVector2D& MousePosition, const FPointerEvent& MouseEvent)
@@ -165,7 +172,7 @@ FReply UImGuiInputHandler::OnMouseMove(const FVector2D& MousePosition, const FPo
 FReply UImGuiInputHandler::OnMouseMove(const FVector2D& MousePosition)
 {
 	InputState->SetMousePosition(MousePosition);
-	return ToReply(true);
+	return ToReply(WantsMouseCapture());
 }
 
 FReply UImGuiInputHandler::OnTouchStarted(const FVector2D& CursorPosition, const FPointerEvent& TouchEvent)
@@ -247,6 +254,17 @@ bool UImGuiInputHandler::IsConsoleEvent(const FKeyEvent& KeyEvent) const
 	const bool bModifierDown = KeyEvent.IsControlDown() || KeyEvent.IsShiftDown() || KeyEvent.IsAltDown() || KeyEvent.IsCommandDown();
 	return !bModifierDown && GetDefault<UInputSettings>()->ConsoleKeys.Contains(KeyEvent.GetKey());
 }
+
+bool UImGuiInputHandler::WantsMouseCapture() const
+{
+	if (ModuleManager) {
+		if (FImGuiContextProxy* Proxy = ModuleManager->GetContextManager().GetContextProxy(ContextIndex)) {
+			return Proxy->WantsMouseCapture();
+		}
+	}
+	return false;
+}
+
 
 #if WITH_EDITOR
 bool UImGuiInputHandler::IsStopPlaySessionEvent(const FKeyEvent& KeyEvent) const

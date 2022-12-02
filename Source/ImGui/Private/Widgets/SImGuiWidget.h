@@ -84,7 +84,7 @@ public:
 
 private:
 
-	void CreateInputHandler(const FStringClassReference& HandlerClassReference);
+	void CreateInputHandler(const FSoftClassPath& HandlerClassReference);
 	void ReleaseInputHandler();
 
 	void RegisterImGuiSettingsDelegates();
@@ -126,6 +126,9 @@ private:
 
 	void SetImGuiTransform(const FSlateRenderTransform& Transform) { ImGuiTransform = Transform; }
 
+	TWeakPtr<SViewport> GetViewportWidget();
+	FViewport const * GetViewport();
+
 #if IMGUI_WIDGET_DEBUG
 	void OnDebugDraw();
 #endif // IMGUI_WIDGET_DEBUG
@@ -158,3 +161,4 @@ private:
 	TSharedPtr<SImGuiCanvasControl> CanvasControlWidget;
 	TWeakPtr<SWidget> PreviousUserFocusedWidget;
 };
+

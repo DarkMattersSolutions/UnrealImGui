@@ -6,10 +6,15 @@
 #include "ImGuiModuleProperties.h"
 #include "ImGuiTextureHandle.h"
 
+#include "LevelEditor.h"
+
 #include <Modules/ModuleManager.h>
 
+class FImGuiModuleManager;
 
-class FImGuiModule : public IModuleInterface
+static const FName ImguiTabName("Imgui");
+
+class IMGUI_API FImGuiModule : public IModuleInterface
 {
 public:
 
@@ -34,6 +39,8 @@ public:
 		return FModuleManager::Get().IsModuleLoaded("ImGui");
 	}
 
+	static FImGuiModuleManager* GetManager();
+
 #if IMGUI_WITH_OBSOLETE_DELEGATES
 
 #if WITH_EDITOR
@@ -45,6 +52,8 @@ public:
 	 * @returns Returns handle that can be used to remove delegate (@see RemoveImGuiDelegate)
 	 */
 	virtual FImGuiDelegateHandle AddEditorImGuiDelegate(const FImGuiDelegate& Delegate);
+
+	virtual FImGuiDelegateHandle AddEditorWindowImGuiDelegate(const FImGuiDelegate& Delegate, int32 index);
 #endif
 
 	/**
@@ -56,6 +65,16 @@ public:
 	 * @returns Returns handle that can be used to remove delegate (@see RemoveImGuiDelegate)
 	 */
 	virtual FImGuiDelegateHandle AddWorldImGuiDelegate(const FImGuiDelegate& Delegate);
+
+	/**
+	 * Add a delegate called at the end of a specific world's debug frame to draw debug controls in its ImGui context,
+	 * creating that context on demand.
+	 *
+	 * @param World - A specific world to add the delegate to to
+	 * @param Delegate - Delegate that we want to add (@see FImGuiDelegate::Create...)
+	 * @returns Returns handle that can be used to remove delegate (@see RemoveImGuiDelegate)
+	 */
+	virtual FImGuiDelegateHandle AddWorldImGuiDelegate(const UWorld* World, const FImGuiDelegate& Delegate);
 
 	/**
 	 * Add shared delegate called for each ImGui context at the end of debug frame, after calling context specific
@@ -98,7 +117,7 @@ public:
 	 * @returns Handle to the texture resources, which can be used to release allocated resources and as an argument to
 	 *     relevant ImGui functions
 	 */
-	virtual FImGuiTextureHandle RegisterTexture(const FName& Name, class UTexture2D* Texture, bool bMakeUnique = false);
+	virtual FImGuiTextureHandle RegisterTexture(const FName& Name, class UTexture* Texture, bool bMakeUnique = false);
 
 	/**
 	 * Unregister texture and release its Slate resources. If handle is null or not valid, this function fails silently
@@ -107,6 +126,8 @@ public:
 	 * @returns ImGui Texture Handle to texture that needs to be unregistered
 	 */
 	virtual void ReleaseTexture(const FImGuiTextureHandle& Handle);
+
+	virtual void RebuildFontAtlas();
 
 	/**
 	 * Get ImGui module properties.
@@ -164,13 +185,23 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
+	void ImguiTick();
+	void InitViewportImgui( TSharedPtr<SLevelViewport> Viewport);
+	void OnLevelEditorCreated(TSharedPtr<ILevelEditor>);
+	void OnRedrawLevelEditingViewports(bool T);
+	
+	static void ToggleInput();
+	void RegisterMenus();
 private:
-
 #if WITH_EDITOR
 	virtual void SetProperties(const FImGuiModuleProperties& Properties);
 	struct FImGuiContextHandle* ImGuiContextHandle = nullptr;
 	struct FImGuiDelegatesContainerHandle* DelegatesContainerHandle = nullptr;
 	friend struct FImGuiContextHandle;
 	friend struct FImGuiDelegatesContainerHandle;
+
+	TSharedPtr<class FUICommandList>					PluginCommands;
 #endif
+private:
+	bool IsEditorInit{ false };
 };

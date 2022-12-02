@@ -38,6 +38,8 @@ public:
 #if WITH_EDITOR
 	// Get or create editor ImGui context proxy.
 	FORCEINLINE FImGuiContextProxy& GetEditorContextProxy() { return *GetEditorContextData().ContextProxy; }
+
+	FORCEINLINE FImGuiContextProxy& GetEditorWindowContextProxy(int32 idx) { return *GetEditorWindowContextData(idx).ContextProxy; }
 #endif
 
 #if !WITH_EDITOR
@@ -66,7 +68,9 @@ public:
 
 	void Tick(float DeltaSeconds);
 
-private:
+	void RebuildFontAtlas();
+
+public:
 
 	struct FContextData
 	{
@@ -93,6 +97,7 @@ private:
 
 #if WITH_EDITOR
 	FContextData& GetEditorContextData();
+	FContextData& GetEditorWindowContextData(int32 idx);
 #endif
 
 #if !WITH_EDITOR
@@ -102,8 +107,7 @@ private:
 	FContextData& GetWorldContextData(const UWorld& World, int32* OutContextIndex = nullptr);
 
 	void SetDPIScale(const FImGuiDPIScaleInfo& ScaleInfo);
-	void BuildFontAtlas();
-	void RebuildFontAtlas();
+	void BuildFontAtlas(const TMap<FName, TSharedPtr<ImFontConfig>>& CustomFontConfigs = {});
 
 	TMap<int32, FContextData> Contexts;
 

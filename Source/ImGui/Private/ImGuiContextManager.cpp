@@ -5,10 +5,12 @@
 #include "ImGuiDelegatesContainer.h"
 #include "ImGuiImplementation.h"
 #include "ImGuiModuleSettings.h"
+#include "ImGuiModule.h"
 #include "Utilities/WorldContext.h"
 #include "Utilities/WorldContextIndex.h"
 
 #include <imgui.h>
+
 
 
 // TODO: Refactor ImGui Context Manager, to handle different types of worlds.
@@ -157,6 +159,18 @@ FImGuiContextManager::FContextData& FImGuiContextManager::GetEditorContextData()
 
 	return *Data;
 }
+FImGuiContextManager::FContextData& FImGuiContextManager::GetEditorWindowContextData(int32 idx)
+{
+	FContextData* Data = Contexts.Find(Utilities::EDITOR_WINDOW_CONTEXT_INDEX_OFFSET + idx);
+
+	if (UNLIKELY(!Data))
+	{
+		Data = &Contexts.Emplace(Utilities::EDITOR_WINDOW_CONTEXT_INDEX_OFFSET + idx, FContextData{ GetEditorContextName(), Utilities::EDITOR_WINDOW_CONTEXT_INDEX_OFFSET + idx, FontAtlas, DPIScale, -1 });
+		OnContextProxyCreated.Broadcast(Utilities::EDITOR_WINDOW_CONTEXT_INDEX_OFFSET + idx, *Data->ContextProxy);
+	}
+
+	return *Data;
+}
 #endif // WITH_EDITOR
 
 #if !WITH_EDITOR
@@ -254,13 +268,27 @@ void FImGuiContextManager::SetDPIScale(const FImGuiDPIScaleInfo& ScaleInfo)
 	}
 }
 
-void FImGuiContextManager::BuildFontAtlas()
+void FImGuiContextManager::BuildFontAtlas(const TMap<FName, TSharedPtr<ImFontConfig>>& CustomFontConfigs)
 {
 	if (!FontAtlas.IsBuilt())
 	{
-		ImFontConfig FontConfig = {};
-		FontConfig.SizePixels = FMath::RoundFromZero(13.f * DPIScale);
-		FontAtlas.AddFontDefault(&FontConfig);
+		FString const FontPath = FPaths::RootDir() / TEXT("Engine/Content/Slate/Fonts/Roboto-Regular.ttf");
+		FontAtlas.AddFontFromFileTTF(TCHAR_TO_ANSI(*FontPath), 20.f * DPIScale);
+		
+		// Build custom fonts
+		for (const TPair<FName, TSharedPtr<ImFontConfig>>& CustomFontPair : CustomFontConfigs)
+		{
+			FName CustomFontName = CustomFontPair.Key;
+			TSharedPtr<ImFontConfig> CustomFontConfig = CustomFontPair.Value;
+
+			// Set font name for debugging
+			if (CustomFontConfig.IsValid())
+			{
+				strncpy_s(CustomFontConfig->Name, TCHAR_TO_ANSI(*CustomFontName.ToString()), 40);
+			}
+
+			FontAtlas.AddFont(CustomFontConfig.Get());
+		}
 
 		unsigned char* Pixels;
 		int Width, Height, Bpp;
@@ -283,5 +311,5 @@ void FImGuiContextManager::RebuildFontAtlas()
 		FontResourcesReleaseCountdown = 3;
 	}
 
-	BuildFontAtlas();
+	BuildFontAtlas(FImGuiModule::Get().GetProperties().GetCustomFonts());
 }
